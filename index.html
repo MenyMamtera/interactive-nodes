@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dynamic Nodes</title>
+    <!-- Load Vis.js Network Library -->
+    <script type="text/javascript" src="https://unpkg.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        #network {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="network"></div>
+
+<script type="text/javascript">
+    // Define 3 interconnected nodes
+    const nodes = new vis.DataSet([
+        { id: 1, label: 'Node A', shape: 'dot', size: 30, color: '#4CAF50' },
+        { id: 2, label: 'Node B', shape: 'dot', size: 30, color: '#2196F3' },
+        { id: 3, label: 'Node C', shape: 'dot', size: 30, color: '#FF9800' }
+    ]);
+
+    // Connect all three points together (Triangle)
+    const edges = new vis.DataSet([
+        { from: 1, to: 2, width: 3, color: '#cccccc' },
+        { from: 2, to: 3, width: 3, color: '#cccccc' },
+        { from: 3, to: 1, width: 3, color: '#cccccc' }
+    ]);
+
+    const container = document.getElementById('network');
+    const data = { nodes: nodes, edges: edges };
+    
+    // Physics layout configuration
+    const options = {
+        physics: {
+            enabled: true,
+            barnesHut: {
+                gravitationalConstant: -2000,
+                centralGravity: 0.1,
+                springLength: 150,
+                springConstant: 0.04
+            }
+        },
+        interaction: { dragNodes: true }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    // Dynamic sizing logic based on relative distance
+    network.on("stabilizationProgress", updateNodeSizes);
+    network.on("interactionHandlerModification", updateNodeSizes);
+    network.on("dragging", updateNodeSizes);
+
+    function updateNodeSizes() {
+        const positions = network.getPositions();
+        
+        // Calculate Euclidean distance between points
+        function getDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        const d12 = getDistance(positions[1], positions[2]);
+        const d23 = getDistance(positions[2], positions[3]);
+        const d31 = getDistance(positions[3], positions[1]);
+
+        // Node size rules: closer connections = larger sizes (Inverse Relationship)
+        // Base size is 70, shrinking as distance increases
+        const size1 = Math.max(10, 70 - (d12 + d31) / 8);
+        const size2 = Math.max(10, 70 - (d12 + d23) / 8);
+        const size3 = Math.max(10, 70 - (d23 + d31) / 8);
+
+        nodes.update([
+            { id: 1, size: size1 },
+            { id: 2, size: size2 },
+            { id: 3, size: size3 }
+        ]);
+    }
+</script>
+</body>
+</html>
